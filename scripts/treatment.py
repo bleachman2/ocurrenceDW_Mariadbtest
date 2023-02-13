@@ -54,6 +54,8 @@ def metadata_tratment(metadataDump: str, metadataTreat: str):
             axis=1,
         )
     ]
+    metadataLocationFinal.reset_index(inplace=True)
+    metadataLocationFinal.index.rename("locationKey", inplace=True)
     metadataLocationFinal[
         ["locationID", "Name", "District", "Region", "Island"]
     ].to_csv(metadataTreat)
