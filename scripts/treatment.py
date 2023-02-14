@@ -14,8 +14,9 @@ def crime_treatment(dumpfile: str, treatfile: str):
     crimePd.to_csv(treatfile)
 
 
-def metadata_tratment(metadataDump: str, metadataTreat: str):
+def metadata_tratment(metadataDump: str, metadataTreat: str, metadataCrimesTreat: str):
     metadataPd = pandas.read_csv(metadataDump)
+    metadataTypePD = metadataPd[metadataPd["dim_num"] == 3]
     metadataPlacePD = metadataPd[metadataPd["dim_num"] == 2]
     # metadataCountry = metadataPlacePD[metadataPlacePD["categ_nivel"] == 1]
     metadataC = metadataPlacePD[metadataPlacePD["categ_nivel"] == 2]
@@ -24,6 +25,25 @@ def metadata_tratment(metadataDump: str, metadataTreat: str):
     metadataLocPD = metadataPlacePD[metadataPlacePD["categ_nivel"] == 5]
 
     # fully self merge the table to get all nuts categories in flattened
+    location_treatment(
+        metadataTreat, metadataC, metadataRegion, metadataDistrict, metadataLocPD
+    )
+    type_treatment(metadataTypePD, metadataCrimesTreat)
+
+
+def type_treatment(metadataTypePD: pandas.DataFrame, metadataCrimesTreat: str):
+    metadataTypePD.rename(
+        columns={"cat_id": "crimeID", "categ_dsg": "crimeName"}, inplace=True
+    )
+    metadataTypePD.reset_index(inplace=True)
+    metadataTypePD.index.rename("crimeKey", inplace=True)
+    print(metadataTypePD)
+    metadataTypePD[["crimeID", "crimeName"]].to_csv(metadataCrimesTreat)
+
+
+def location_treatment(
+    metadataTreat, metadataC, metadataRegion, metadataDistrict, metadataLocPD
+):
     metadataLocationTreat = pandas.merge(
         pandas.merge(
             pandas.merge(
@@ -61,4 +81,6 @@ def metadata_tratment(metadataDump: str, metadataTreat: str):
     ].to_csv(metadataTreat)
 
 
-metadata_tratment("data/metadata.csv", "data/metadataTreat.csv")
+metadata_tratment(
+    "data/metadata.csv", "data/metadataTreat.csv", "data/metadataCrimesTreat.csv"
+)

@@ -12,6 +12,7 @@ def read_configs() -> tuple[str]:
     metadataURL = config["URL"]["metadataURL"]
     metadataDump = config["URL"]["metadataDump"]
     metadataTreat = config["URL"]["metadataTreat"]
+    metadataCrimesTreat = config["URL"]["metadataCrimesTreat"]
 
     return (
         crimeURL,
@@ -20,6 +21,7 @@ def read_configs() -> tuple[str]:
         metadataURL,
         metadataDump,
         metadataTreat,
+        metadataCrimesTreat,
     )
 
 
@@ -31,9 +33,11 @@ def main():
         metadataURL,
         metadataDump,
         metadataTreat,
+        metadataCrimesTreat,
     ) = read_configs()
     dump.load_crimesData(crimeURL, dumpFileName)
     dump.load_metadata(metadataURL, metadataDump)
+    trt.metadata_tratment(metadataDump, metadataTreat, metadataCrimesTreat)
     trt.crime_treatment(dumpFileName, treatFileName)
 
 
