@@ -1,19 +1,6 @@
 import pandas
 
 
-def crime_treatment(dumpfile: str, treatfile: str):
-    crimePd = pandas.read_csv(dumpfile)
-    crimePd = crimePd.drop(columns=["sinal_conv_desc", "sinal_conv", "valor"]).rename(
-        columns={
-            "dim_3": "CrimeId",
-            "dim_3_t": "CrimeName",
-            "geodsg": "NUTSName",
-            "geocod": "NUTSid",
-        }
-    )
-    crimePd.to_csv(treatfile)
-
-
 def metadata_tratment(metadataDump: str, metadataTreat: str, metadataCrimesTreat: str):
     metadataPd = pandas.read_csv(metadataDump)
     metadataTypePD = metadataPd[metadataPd["dim_num"] == 3]
@@ -37,13 +24,19 @@ def type_treatment(metadataTypePD: pandas.DataFrame, metadataCrimesTreat: str):
     )
     metadataTypePD.reset_index(inplace=True)
     metadataTypePD.index.rename("crimeKey", inplace=True)
-    print(metadataTypePD)
     metadataTypePD[["crimeID", "crimeName"]].to_csv(metadataCrimesTreat)
 
 
 def location_treatment(
-    metadataTreat, metadataC, metadataRegion, metadataDistrict, metadataLocPD
+    metadataTreat,
+    metadataC: pandas.DataFrame,
+    metadataRegion: pandas.DataFrame,
+    metadataDistrict: pandas.DataFrame,
+    metadataLocPD: pandas.DataFrame,
 ):
+    print(len(metadataLocPD.columns))
+
+    metadataLocPD.loc[9999] = [None] * len(metadataLocPD.columns)
     metadataLocationTreat = pandas.merge(
         pandas.merge(
             pandas.merge(
@@ -59,7 +52,7 @@ def location_treatment(
     ).rename(
         columns={
             "cat_id": "locationID",
-            "categ_dsg": "Name",
+            "categ_dsg": "Location",
             "categ_dsg_4": "District",
             "categ_dsg_3": "Region",
             "categ_dsg_2": "Island",
@@ -68,19 +61,57 @@ def location_treatment(
     # remove all the rows where the nuts classifications don't correspond
     metadataLocationFinal = metadataLocationTreat[
         metadataLocationTreat.apply(
-            lambda row: row["locationID"].startswith(row["cat_id_2"])
-            and row["locationID"].startswith(row["cat_id_3"])
-            and row["locationID"].startswith(row["cat_id_4"]),
+            lambda row: row["cat_id_3"].startswith(row["cat_id_2"])
+            and row["cat_id_4"].startswith(row["cat_id_3"])
+            and (
+                row["locationID"].startswith(row["cat_id_4"])
+                if row["locationID"]
+                else row["locationID"] is None
+            ),
             axis=1,
         )
     ]
     metadataLocationFinal.reset_index(inplace=True)
     metadataLocationFinal.index.rename("locationKey", inplace=True)
+    metadataLocationFinal["Place"] = metadataLocationFinal["Location"].fillna(
+        metadataLocationFinal["District"]
+    )
+    metadataLocationFinal["placeID"] = metadataLocationFinal["locationID"].fillna(
+        metadataLocationFinal["cat_id_4"]
+    )
     metadataLocationFinal[
-        ["locationID", "Name", "District", "Region", "Island"]
+        ["placeID", "Place", "Location", "District", "Region", "Island"]
     ].to_csv(metadataTreat)
+
+
+def crime_treatment(
+    dumpfile: str, treatfile: str, crimeTreatFile: str, locationTreatFile: str
+):
+    crimePd = pandas.read_csv(dumpfile)
+    # Load treated metadata
+    crimesMetadata = pandas.read_csv(crimeTreatFile)
+    locationMetadata = pandas.read_csv(locationTreatFile)
+    crimePd.rename(
+        columns={
+            "dim_3": "crimeID",
+            "geocod": "NUTSid",
+        },
+        inplace=True,
+    )
+
+    resPD = crimePd.merge(crimesMetadata, how="left", on="crimeID").merge(
+        locationMetadata, how="left", left_on="NUTSid", right_on="placeID"
+    )
+    resPD.index.rename("uniqueKey", inplace=True)
+    resPD[["locationKey", "crimeKey"]].to_csv(treatfile)
 
 
 metadata_tratment(
     "data/metadata.csv", "data/metadataTreat.csv", "data/metadataCrimesTreat.csv"
+)
+crime_treatment(
+    "data/crimeData.csv",
+    "data/crimeTreat.csv",
+    "data/metadataCrimesTreat.csv",
+    "data/metadataTreat.csv",
 )
