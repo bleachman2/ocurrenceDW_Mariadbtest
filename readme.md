@@ -12,12 +12,7 @@ create a db called ocurrDW
 
 
 ## Todo
-load more data -> maybe freguesias https://dados.gov.pt/pt/datasets/r/ec6ef805-c278-4b4d-ba9b-3116264f68b4
-
-load existing data into mariadb
-
-format data into DW compatability
-
 frontend
+changing dim
 
 add type hint
