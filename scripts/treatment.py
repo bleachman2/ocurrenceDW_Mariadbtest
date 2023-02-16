@@ -37,6 +37,9 @@ def location_treatment(
     print(len(metadataLocPD.columns))
 
     metadataLocPD.loc[9999] = [None] * len(metadataLocPD.columns)
+    metadataDistrict.loc[9999] = [None] * len(metadataDistrict.columns)
+    metadataRegion.loc[9999] = [None] * len(metadataDistrict.columns)
+
     metadataLocationTreat = pandas.merge(
         pandas.merge(
             pandas.merge(
@@ -61,12 +64,29 @@ def location_treatment(
     # remove all the rows where the nuts classifications don't correspond
     metadataLocationFinal = metadataLocationTreat[
         metadataLocationTreat.apply(
-            lambda row: row["cat_id_3"].startswith(row["cat_id_2"])
-            and row["cat_id_4"].startswith(row["cat_id_3"])
+            lambda row: (
+                row["cat_id_3"].startswith(row["cat_id_2"])
+                if row["cat_id_3"]
+                else row["cat_id_3"] is None
+            )
+            and (
+                row["cat_id_4"].startswith(row["cat_id_3"])
+                if (row["cat_id_4"] and row["cat_id_3"])
+                else (row["cat_id_4"] is None)
+                or (row["cat_id_4"] is None and row["cat_id_3"] is None)
+            )
             and (
                 row["locationID"].startswith(row["cat_id_4"])
-                if row["locationID"]
-                else row["locationID"] is None
+                if (row["locationID"] and row["cat_id_4"])
+                else (
+                    (row["locationID"] is None)
+                    or (row["cat_id_4"] is None and row["locationID"] is None)
+                    or (
+                        row["cat_id_4"] is None
+                        and row["cat_id_4"] is None
+                        and row["locationID"] is None
+                    )
+                )
             ),
             axis=1,
         )
@@ -74,11 +94,16 @@ def location_treatment(
     metadataLocationFinal.reset_index(inplace=True)
     metadataLocationFinal.index.rename("locationKey", inplace=True)
     metadataLocationFinal["Place"] = metadataLocationFinal["Location"].fillna(
-        metadataLocationFinal["District"]
+        metadataLocationFinal["District"].fillna(
+            metadataLocationFinal["Region"].fillna(metadataLocationFinal["Island"])
+        )
     )
     metadataLocationFinal["placeID"] = metadataLocationFinal["locationID"].fillna(
-        metadataLocationFinal["cat_id_4"]
+        metadataLocationFinal["cat_id_4"].fillna(
+            metadataLocationFinal["cat_id_3"].fillna(metadataLocationFinal["cat_id_2"])
+        )
     )
+    metadataLocationFinal.loc[9999] = {"placeID": 0, "Place": "Portugal"}
     metadataLocationFinal[
         ["placeID", "Place", "Location", "District", "Region", "Island"]
     ].to_csv(metadataTreat)
@@ -103,6 +128,8 @@ def crime_treatment(
         locationMetadata, how="left", left_on="NUTSid", right_on="placeID"
     )
     resPD.index.rename("uniqueKey", inplace=True)
+    resPD["locationKey"].fillna("0", inplace=True)
+    resPD = resPD.astype({"locationKey": "int64"})
     resPD[["locationKey", "crimeKey"]].to_csv(treatfile)
 
 
