@@ -1,0 +1,24 @@
+{% extends 'base.html'%}    
+{% block head %}
+<title> TASK MASTER</title>
+{% endblock %}
+{% block body %}
+<div>
+    <table>
+        <tr>
+            {% for header in headings %}
+            <th> {{ header }}</th>
+            {% endfor %}
+        </tr>
+        <tr>
+            {% for row in data %}
+                <tr>
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+        </tr>
+    </table>
+</div>
+{% endblock %}
